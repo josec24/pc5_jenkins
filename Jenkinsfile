@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         //be sure to replace "felipelujan" with your own Docker Hub username
-        DOCKER_IMAGE_NAME = "josec24/jose-docker-demo"
+        DOCKER_IMAGE_NAME = "josec24/gradle-test"
     }
     stages {      
         stage('Build Docker Image') {
