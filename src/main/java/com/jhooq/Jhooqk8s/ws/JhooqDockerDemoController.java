@@ -8,7 +8,7 @@ public class JhooqDockerDemoController {
 
     @GetMapping("/hello")
     public String hello() {
-        return "Jose";
+        return "Error";
     }
 
 }
