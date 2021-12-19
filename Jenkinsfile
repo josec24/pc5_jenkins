@@ -40,13 +40,13 @@ pipeline {
         }
         stage("Dockerize app") {
             steps {
-                sh "docker build . -f infra/Dockerfile -t clequinio/aws-k8s-react-app:${env.BUILD_TAG}"
+                sh "docker build . -f infra/Dockerfile -t josec24/jose-docker-demo:${env.BUILD_TAG}"
             }
         }
         stage("Push Docker Image") {
             steps {
                 withDockerRegistry([url: "", credentialsId: "docker-credentials"]) {
-                    sh "docker push clequinio/aws-k8s-react-app:${env.BUILD_TAG}"
+                    sh "docker push josec24/jose-docker-demo:${env.BUILD_TAG}"
                 }
             }
         }
@@ -57,23 +57,23 @@ pipeline {
         }
         stage("Map kubectl to the k8s aws cluster and configure") {
             steps{
-                withAWS(credentials: "aws-credentials", region: "eu-west-3") {
-                    sh "aws eks --region eu-west-3 update-kubeconfig --name aws-k8s-react-app"
-                    sh "kubectl config use-context arn:aws:eks:eu-west-3:507569708173:cluster/aws-k8s-react-app"
+                withAWS(credentials: "aws-credentials", region: "us-east-1") {
+                    sh "aws eks --region us-east-1 update-kubeconfig --name aws-k8s-react-app"
+                    sh "kubectl config use-context arn:aws:eks:us-east-1:341033090765:cluster/jose-test-cluster"
                     sh "kubectl apply -f infra/k8s-config.yml"
                 }
             }
         }
         stage("Deploy the new app dockerized") {
             steps{
-                withAWS(credentials: "aws-credentials", region: "eu-west-3") {
-                    sh "kubectl set image deployment/aws-k8s-react-app-deployment aws-k8s-react-app=clequinio/aws-k8s-react-app:${env.BUILD_TAG}"
+                withAWS(credentials: "aws-credentials", region: "us-east-1") {
+                    sh "kubectl set image deployment/aws-k8s-react-app-deployment aws-k8s-react-app=josec24/jose-docker-demo:${env.BUILD_TAG}"
                 }
             }
         }
         stage("Test deployment") {
             steps{
-                withAWS(credentials: "aws-credentials", region: "eu-west-3") {
+                withAWS(credentials: "aws-credentials", region: "us-east-1") {
                     sh "kubectl get nodes"
                     sh "kubectl get deployment"
                     sh "kubectl get pod -o wide"
