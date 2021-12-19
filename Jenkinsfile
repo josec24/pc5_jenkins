@@ -1,96 +1,45 @@
 pipeline {
     agent any
     environment {
-        npm_config_cache = "npm-cache"
+        //be sure to replace "felipelujan" with your own Docker Hub username
+        DOCKER_IMAGE_NAME = "josec24/jose-docker-demo"
     }
-    stages {
-        stage("Check versions") {
-            steps {
-                sh '''
-                    aws --version
-                    eksctl version
-                    kubectl version 2>&1 | tr -d '\n'
-                    docker --version
-                    node --version
-                    npm --version
-					hadolint --version
-                    ls
-                '''
+    stages {      
+        stage('Build Docker Image') {
+            when {
+                branch 'master'
             }
-        }
-        stage("Build") {
             steps {
-                sh "npm install"
-            }
-        }
-        stage("Test") {
-            steps {
-                sh "CI=true npm test"
-            }
-        }
-        stage("Release") {
-            steps {
-                sh "npm run build"
-            }
-        }
-        stage("Lint") {
-            steps {
-                sh "hadolint infra/Dockerfile"
-            }
-        }
-        stage("Dockerize app") {
-            steps {
-                sh "docker build . -f infra/Dockerfile -t josec24/jose-docker-demo:${env.BUILD_TAG}"
-            }
-        }
-        stage("Push Docker Image") {
-            steps {
-                withDockerRegistry([url: "", credentialsId: "docker-credentials"]) {
-                    sh "docker push josec24/jose-docker-demo:${env.BUILD_TAG}"
+                script {
+                    app = docker.build(DOCKER_IMAGE_NAME)
                 }
             }
         }
-        stage("Create k8s aws cluster") {
-            steps{
-                sh "./infra/exist-aws-k8s-cluster.sh || ./infra/create-aws-k8s-cluster.sh || exit 0"
+        stage('Push Docker Image') {
+            when {
+                branch 'master'
             }
-        }
-        stage("Map kubectl to the k8s aws cluster and configure") {
-            steps{
-                withAWS(credentials: "aws-credentials", region: "us-east-1") {
-                    sh "aws eks --region us-east-1 update-kubeconfig --name aws-k8s-react-app"
-                    sh "kubectl config use-context arn:aws:eks:us-east-1:341033090765:cluster/jose-test-cluster"
-                    sh "kubectl apply -f infra/k8s-config.yml"
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker_hub_login') {
+                        app.push("${env.BUILD_NUMBER}")
+                        app.push("latest")
+                    }
                 }
             }
         }
-        stage("Deploy the new app dockerized") {
-            steps{
-                withAWS(credentials: "aws-credentials", region: "us-east-1") {
-                    sh "kubectl set image deployment/aws-k8s-react-app-deployment aws-k8s-react-app=josec24/jose-docker-demo:${env.BUILD_TAG}"
-                }
+        stage('DeployToProduction') {
+            when {
+                branch 'master'
             }
-        }
-        stage("Test deployment") {
-            steps{
-                withAWS(credentials: "aws-credentials", region: "us-east-1") {
-                    sh "kubectl get nodes"
-                    sh "kubectl get deployment"
-                    sh "kubectl get pod -o wide"
-                    sh "kubectl get service/service-aws-k8s-react-app"
-                    sh "curl \$(kubectl get service/service-aws-k8s-react-app --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-                }
-            }
-        }
-        stage("Remove all unused containers, networks, images") {
-            steps{
-                sh "docker system prune -f"
+            steps {
+                milestone(1)
+                kubernetesDeploy(
+                    kubeconfigId: 'kubeconfig',
+                    configs: 'k8s_svc_deploy.yaml',
+                    enableConfigSubstitution: true
+                )
             }
         }
     }
 }
-
-
-
-
-

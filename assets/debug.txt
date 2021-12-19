@@ -1,1 +1,0 @@
-docker run -p 80:80 josec24/jose-docker-demo:jenkins-aws-k8s-react-app-48
