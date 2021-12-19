@@ -6,13 +6,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class JhooqDockerDemoController {
 
-    @GetMapping("/hello")
+    @GetMapping("/jose")
     public String hello() {
         return "Hello - Jhooq-k8s i Have updated the message";
     }
 
-    @GetMapping("/jose")
-    public String jose() {
-        return "Jose";
-    }
 }
