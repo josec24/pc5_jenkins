@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-aws-k8s-react-app
+
+spec:
+  selector:
+    app: aws-k8s-react-app
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-k8s-react-app-deployment
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aws-k8s-react-app
+  template:
+    metadata:
+      labels:
+        app: aws-k8s-react-app
+    spec:
+      containers:
+        - name: aws-k8s-react-app
+          image: clequinio/aws-k8s-react-app
+          imagePullPolicy: "Always"
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              memory: "64Mi"
+              cpu: "500m"
